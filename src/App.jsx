@@ -1,22 +1,89 @@
 import { useState } from "react";
 import "./App.css";
-import { Input } from "antd";
+import { Configuration, OpenAIApi } from "openai";
+
+const configuration = new Configuration({
+  organization: "org-Oxs5q2lgnCnTOpxA4LCwl3uD",
+  apiKey: "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",
+});
+const openai = new OpenAIApi(configuration);
+
 function App() {
-  const [userInput, setUserInput] = useState("");
-  function handleUserInput(e) {
-    setUserInput(e.target.value);
-  }
+  const [message, setMessage] = useState("");
+  const [chats, setChats] = useState([]);
+  const [isTyping, setIsTyping] = useState(false);
+
+  const chat = async (e, message) => {
+    e.preventDefault();
+
+    if (!message) return;
+    setIsTyping(true);
+    scrollTo(0,1e10)
+
+    let msgs = chats;
+    msgs.push({ role: "user", content: message });
+    setChats(msgs);
+
+    setMessage("");
+
+    await openai
+      .createChatCompletion({
+        model: "gpt-3.5-turbo",
+        messages: [
+          {
+            role: "system",
+            content:
+              "You are a EbereGPT. You can help with graphic design tasks",
+          },
+          ...chats,
+        ],
+      })
+      .then((res) => {
+        msgs.push(res.data.choices[0].message);
+        setChats(msgs);
+        setIsTyping(false);
+        scrollTo(0,1e10)
+      })
+      .catch((error) => {
+        console.log(error);
+      });
+  };
+
   return (
-    <>
-      <h1>Welcome to AI Assist</h1>
-      <h5>Built by Harshal and Akshay</h5>
-      <Input
-        type="text"
-        value={userInput}
-        onChange={handleUserInput}
-        placeholder="Type Here..."
-      />
-    </>
+    <main>
+      <h1>AI-Assist</h1>
+      <h4>Built By Harshal and Akshay</h4>
+
+      <section>
+        {chats && chats.length
+          ? chats.map((chat, index) => (
+              <p key={index} className={chat.role === "user" ? "user_msg" : ""}>
+                <span>
+                  <b>{chat.role.toUpperCase()}</b>
+                </span>
+                <span>:</span>
+                <span>{chat.content}</span>
+              </p>
+            ))
+          : ""}
+      </section>
+
+      <div className={isTyping ? "" : "hide"}>
+        <p>
+          <i>{isTyping ? "Typing" : ""}</i>
+        </p>
+      </div>
+
+      <form action="" onSubmit={(e) => chat(e, message)}>
+        <input
+          type="text"
+          name="message"
+          value={message}
+          placeholder="Type a message here and hit Enter..."
+          onChange={(e) => setMessage(e.target.value)}
+        />
+      </form>
+    </main>
   );
 }
 
